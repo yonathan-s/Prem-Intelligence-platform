@@ -13,11 +13,12 @@ from pathlib import Path
 
 import requests
 
-from ingestion import sources
+from ingestion import sources, wikipedia
 
 log = logging.getLogger("ingestion")
 
 DEFAULT_OUT = Path("data/raw/premier_league_raw.json")
+WIKIPEDIA_CACHE = Path("data/cache/wikipedia")
 
 
 def validate_football_data(seasons: dict[str, list[dict]]) -> list[str]:
@@ -47,6 +48,13 @@ def build_dataset(session: requests.Session) -> dict:
     log.info("engsoccerdata: European Cup / Champions League")
     champions_league = sources.extract_engsoccerdata_champions_league(session)
 
+    log.info("Wikipedia: English clubs' European campaigns (this is slow on the first run)")
+    campaigns, campaign_problems = wikipedia.extract_european_campaigns(
+        session, int(max(football_data)[:4]), WIKIPEDIA_CACHE
+    )
+    for p in campaign_problems:
+        log.warning("european campaigns: %s", p)
+
     problems = validate_football_data(football_data)
     for p in problems:
         log.warning("validation: %s", p)
@@ -59,6 +67,11 @@ def build_dataset(session: requests.Session) -> dict:
                     "url": "https://www.football-data.co.uk/englandm.php",
                     "coverage": f"{min(football_data)} to {max(football_data)}",
                 },
+                "wikipedia": {
+                    "url": "https://en.wikipedia.org/wiki/UEFA_Champions_League",
+                    "license": "CC BY-SA 4.0",
+                    "coverage": "English clubs in UEFA competitions, round reached per campaign",
+                },
                 "engsoccerdata": {
                     "url": "https://github.com/jalapic/engsoccerdata",
                     "license": "Free for non-commercial use; credit James Curley",
@@ -68,16 +81,19 @@ def build_dataset(session: requests.Session) -> dict:
                 "football_data_matches": sum(len(m) for m in football_data.values()),
                 "engsoccerdata_england_matches": len(england),
                 "champions_league_matches": len(champions_league),
+                "european_campaigns": len(campaigns),
             },
             "matches_per_team": {
                 sources.season_label(y): sources.matches_per_team(y)
                 for y in range(sources.FIRST_SEASON_START, int(max(football_data)[:4]) + 1)
             },
             "validation_problems": problems,
+            "european_campaign_problems": campaign_problems,
         },
         "football_data_matches": football_data,
         "engsoccerdata_england_matches": england,
         "champions_league_matches": champions_league,
+        "european_campaigns": campaigns,
     }
 
 

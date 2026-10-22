@@ -25,14 +25,20 @@ def season_label(start_year: int) -> str:
     return f"{start_year}/{(start_year + 1) % 100:02d}"
 
 
-def fetch_text(url: str, session: requests.Session, retries: int = 4) -> str | None:
-    """GET a text file. Returns None on 404; retries on 429/5xx with backoff."""
+def fetch_text(url: str, session: requests.Session, retries: int = 5) -> str | None:
+    """GET a text file. Returns None on 404; retries on 429/5xx, honouring Retry-After."""
     for attempt in range(retries):
-        resp = session.get(url, timeout=30)
+        try:
+            resp = session.get(url, timeout=30)
+        except (requests.ConnectionError, requests.Timeout):
+            time.sleep(5 * 2**attempt)
+            continue
         if resp.status_code == 404:
             return None
         if resp.status_code == 429 or resp.status_code >= 500:
-            time.sleep(2**attempt)
+            retry_after = resp.headers.get("Retry-After", "")
+            wait = int(retry_after) if retry_after.isdigit() else 5 * 2**attempt
+            time.sleep(min(wait, 120))
             continue
         resp.raise_for_status()
         try:
