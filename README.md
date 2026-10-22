@@ -154,4 +154,24 @@ The warehouse stores the historical analytical datasets. PostgreSQL serves preco
 
 ## Getting started
 
-Setup instructions will be added once the MVP is runnable.
+### Ingest the raw data
+
+Requires Python 3.11+.
+
+```bash
+pip install -r requirements.txt
+python -m ingestion.run          # writes data/raw/premier_league_raw.json
+pytest
+```
+
+The pipeline extracts three datasets into one JSON file (the Bronze layer), validates match counts per season, and records source metadata:
+
+| Dataset | Source | Coverage |
+|---|---|---|
+| `football_data_matches` | [football-data.co.uk](https://www.football-data.co.uk/englandm.php) | 1993/94 onward: results, shots, corners, fouls, cards, odds (where available) |
+| `engsoccerdata_england_matches` | [engsoccerdata](https://github.com/jalapic/engsoccerdata) | Top flight from 1992/93, used to fill the 1992/93 gap and cross-check results |
+| `champions_league_matches` | [engsoccerdata](https://github.com/jalapic/engsoccerdata) | European Cup / Champions League, 1992/93 to 2017/18 |
+
+Known gaps: UEFA Cup / Europa League and post-2017/18 Champions League results aren't covered yet, and player statistics will be added in a later stage.
+
+Data credit: football-data.co.uk, and engsoccerdata by James Curley (free for non-commercial use).
