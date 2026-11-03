@@ -172,6 +172,8 @@ The pipeline extracts three datasets into one JSON file (the Bronze layer), vali
 | `engsoccerdata_england_matches` | [engsoccerdata](https://github.com/jalapic/engsoccerdata) | Top flight from 1992/93, used to fill the 1992/93 gap and cross-check results |
 | `champions_league_matches` | [engsoccerdata](https://github.com/jalapic/engsoccerdata) | European Cup / Champions League, 1992/93 to 2017/18 |
 
-Known gaps: UEFA Cup / Europa League and post-2017/18 Champions League results aren't covered yet, and player statistics will be added in a later stage.
+| `european_campaigns` | [Wikipedia](https://en.wikipedia.org/wiki/UEFA_Champions_League) season pages | English clubs in the Champions League, UEFA Cup / Europa League, Cup Winners' Cup and Conference League, 1992/93 onward: the furthest round each club reached |
 
-Data credit: football-data.co.uk, and engsoccerdata by James Curley (free for non-commercial use).
+Known gaps: `european_campaigns` records the round reached, not match-level results (the Champions League has match-level data to 2017/18 in `champions_league_matches`). Intertoto Cup and Super Cup entries are excluded. The first run makes several hundred polite requests to Wikipedia and takes ~30 minutes; pages are cached in `data/cache/`, so reruns take seconds. Player statistics will be added in a later stage.
+
+Data credit: football-data.co.uk, engsoccerdata by James Curley (free for non-commercial use), and Wikipedia (CC BY-SA 4.0).
