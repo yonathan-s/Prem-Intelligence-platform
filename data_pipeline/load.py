@@ -10,7 +10,7 @@ from sqlalchemy import Connection, Engine, create_engine, text
 SCHEMA_FILE = Path(__file__).with_name("schema.sql")
 
 # Child tables first, so nothing is emptied while another table still points at it.
-TABLES_TO_EMPTY = ["uefa_match", "team_season", "club", "competition", "season"]
+TABLES_TO_EMPTY = ["season_index", "uefa_match", "team_season", "club", "round_rank", "competition", "season"]
 
 
 def get_engine() -> Engine:

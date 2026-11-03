@@ -9,7 +9,7 @@ import pandas as pd
 
 from load import empty_tables, get_engine, load_table, run_schema
 from reference_data import COMPETITIONS, SEASONS
-from transform import build_clubs, clean_team_seasons, clean_uefa_matches
+from transform import build_clubs, build_round_rank, clean_team_seasons, clean_uefa_matches
 
 RAW_DIR = Path(__file__).resolve().parent.parent / "raw_data"
 TEAMS_CSV = RAW_DIR / "team_season_records (2).csv"
@@ -22,12 +22,14 @@ def main() -> None:
 
     # Transform everything first, so a data problem stops the run before the database is touched.
     clubs = build_clubs(teams_raw, uefa_raw)
+    uefa_match = clean_uefa_matches(uefa_raw, clubs)
     tables = {
         "season": pd.DataFrame(SEASONS),
         "club": clubs,
-        "competition": pd.DataFrame(COMPETITIONS).astype({"strength_factor": "float64"}),  # empty for now, but numeric
+        "competition": pd.DataFrame(COMPETITIONS),
+        "round_rank": build_round_rank(uefa_match),  # needs the matches to know which rounds exist
         "team_season": clean_team_seasons(teams_raw, clubs),
-        "uefa_match": clean_uefa_matches(uefa_raw, clubs),
+        "uefa_match": uefa_match,
     }
 
     # One transaction: if anything fails, the database is left as it was.
