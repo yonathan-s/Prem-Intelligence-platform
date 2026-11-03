@@ -9,7 +9,7 @@ The platform goes beyond raw statistics to answer questions such as:
 - Does winning the Premier League mean more when other English clubs are performing strongly in Europe?
 - Which Premier League team achieved the greatest dominance relative to its competition?
 
-> **Status:** early development. The MVP (historical team comparison) is in progress. See the [roadmap](#roadmap).
+> **Status:** the data pipeline and the Historical Dominance Index are built and loaded into a Supabase Postgres database. The API and frontend are next. See the [roadmap](#roadmap).
 
 ---
 
@@ -52,7 +52,15 @@ $$
 HDI = D \times \left(0.80 + 0.20 \cdot \frac{L}{100}\right)
 $$
 
-The formula and weights are provisional and will be validated against historical data. Every formula configuration is stored as a versioned model, so any score can be traced back to the exact weights that produced it. Users can also supply their own weights.
+The formula and weights are provisional. Every weight lives in [data_pipeline/reference_data.py](data_pipeline/reference_data.py), and each score row records the model version that produced it.
+
+### How each part is calculated
+
+- **D (domestic dominance):** a weighted average of points per game (30%), win rate (20%), goal difference per game (25%) and title margin (25%). The title margin is points per game ahead of the strongest rival: the gap to the runner-up for the champion, and the (negative) gap to the champion for everyone else. Each measure is scaled from 0 to 100 across all 686 club-seasons first, and everything is per game, so the 42-game seasons are comparable with the 38-game ones.
+- **E (European strength):** for each club-season, how far the other Premier League clubs got in Europe. Each competition round has a rank (0 for qualifying up to 10 for winning the competition) multiplied by a strength factor for the competition (Champions League 1.0, Europa League and UEFA Cup 0.6, Cup Winners' Cup 0.5, Conference League 0.4). Each club is judged on the competition where it got closest to the top. E is the other clubs' points as a percentage of the most they could have earned, so a season with more European places is not scored higher just for having more clubs, and a Champions League club counts for more than a Europa League one.
+- **C (domestic parity):** the spread (standard deviation) of the other clubs' points per game that season, scaled so the most evenly matched league scores 100.
+
+Known limits: points deductions are not applied, so positions in the four seasons that had them (Middlesbrough 1996/97, Portsmouth 2009/10, Everton 2023/24, Nottingham Forest 2023/24) follow raw points; the 1992/93 Champions League pre-group rounds are scored approximately.
 
 ---
 
@@ -78,62 +86,61 @@ Cross-cutting concerns: **Docker**, **Terraform**, **AWS**, **GitHub Actions** (
 
 ## Tech stack
 
-The MVP uses a lightweight local stack. Its layout mirrors the end-state platform (medallion layers, dbt models, a separate scoring engine), so later stages swap the tools without rewriting the logic.
+The MVP is a small Python pipeline writing to a hosted Postgres database. Its layout mirrors the end-state platform (raw data, cleaning, scoring, serving), so later stages swap the tools without rewriting the logic.
 
 | Area | MVP | End state |
 |---|---|---|
-| Language | Python 3.12 (uv), TypeScript | Same |
-| Ingestion | Python scripts (pandas) | Python, **Apache Airflow** (scheduling, retries, backfills) |
-| Raw storage | Local files (`data/raw`) | **AWS S3** (Bronze) |
+| Language | Python 3.11+, TypeScript | Same |
+| Ingestion | Python (pandas, SQLAlchemy) from CSV files in `raw_data/` | Python, **Apache Airflow** (scheduling, retries, backfills) |
+| Raw storage | Local CSV files | **AWS S3** (Bronze) |
 | Processing | pandas | **Databricks**, **PySpark**, **Delta Lake** (Silver) |
-| Transformation | **dbt Core** on PostgreSQL | **dbt** on **Snowflake** (Gold) |
-| Warehouse | PostgreSQL | **Snowflake** |
-| Data quality | dbt tests, pytest | dbt tests, **Great Expectations**, lineage via dbt docs |
+| Transformation | pandas scoring scripts | **dbt** on **Snowflake** (Gold) |
+| Warehouse | **Supabase** (hosted PostgreSQL) | **Snowflake** |
+| Data quality | Validation checks in the pipeline | dbt tests, **Great Expectations**, lineage via dbt docs |
 | Scoring engine | Python (pandas, NumPy) | Python, versioned model configurations |
-| Serving database | PostgreSQL (SQLAlchemy 2.0, Alembic) | **AWS RDS PostgreSQL**, **Redis** cache |
+| Serving database | **Supabase** (hosted PostgreSQL) | Supabase or **AWS RDS PostgreSQL**, **Redis** cache |
 | API | **FastAPI**, Pydantic | Same, containerised |
 | Frontend | React, Vite, TanStack Query, Recharts, Tailwind | Same, hosted on S3 + CloudFront |
-| Containers | **Docker Compose** | **Docker**, **AWS ECS Fargate** |
+| Containers | — | **Docker**, **AWS ECS Fargate** |
 | Infrastructure as code | — | **Terraform** |
-| CI/CD | **GitHub Actions** (lint, tests) | GitHub Actions (tests, dbt build, image publish, Terraform plan/apply) |
-| Observability | Structured logging | **CloudWatch** or **Prometheus + Grafana**, alerting |
+| CI/CD | — | **GitHub Actions** (tests, dbt build, image publish, Terraform plan/apply) |
+| Observability | Printed row counts | **CloudWatch** or **Prometheus + Grafana**, alerting |
 
 ---
 
 ## Data model
 
+Defined in [data_pipeline/schema.sql](data_pipeline/schema.sql):
+
 | Table | Purpose |
 |---|---|
-| `clubs` | Unique club identities, with historical name variants mapped to one club |
-| `seasons` | Seasons from 1992/93 onward, including matches per team |
-| `matches` | Match results and fixture information |
-| `team_seasons` | Aggregated domestic performance by club and season |
-| `players` | Player information |
-| `player_seasons` | Player performance by season and club |
-| `european_campaigns` | European competition results for English clubs |
-| `team_match_stats` | Possession, shots and advanced statistics where available |
-| `model_versions` | Scoring formula configurations and weights |
-| `dominance_scores` | Calculated HDI scores and their components |
+| `season` | One row per season from 1992/93: number of clubs and games per team |
+| `club` | One row per English club, with the UEFA file's spelling where it differs from the league file's |
+| `competition` | The five European competitions, with each one's strength factor |
+| `team_season` | Premier League table for every club and season (686 rows) |
+| `uefa_match` | Every European match involving an English club since 1992/93 (2,244 rows), with the winner of any penalty-decided final |
+| `round_rank` | How far each round of each competition is worth: a rank from 0 to 10 and a weight |
+| `season_index` | The European-strength score (E) for each club-season |
+| `dominance_score` | D, E, C, L and the HDI for each club-season, with the measures behind them |
 
-The warehouse stores the historical analytical datasets. PostgreSQL serves precomputed rankings and comparisons to the API.
+Later stages add players and player seasons.
 
 ---
 
 ## Roadmap
 
 ### Stage 1: MVP, historical team comparison
-- [ ] Docker Compose with PostgreSQL; schema managed by Alembic
-- [ ] Ingest historical Premier League results (raw → staging → marts)
-- [ ] dbt models for `team_seasons`, with tests checking final tables against official standings
-- [ ] Domestic dominance score (D) from per-game metrics
+- [x] Postgres database on Supabase, created by `schema.sql`
+- [x] Load Premier League tables and European results from CSV, with validation
+- [x] Domestic dominance score (D) from per-game measures
 - [ ] FastAPI endpoints for seasons, league tables, team-season comparison and rankings
 - [ ] React frontend: rankings, side-by-side comparison, season view
-- [ ] GitHub Actions running linting and tests
+- [ ] Tests and GitHub Actions running them
 
 ### Stage 2: League strength and HDI
-- [ ] Ingest historical European competition results
-- [ ] European-strength (E) and domestic-parity (C) metrics
-- [ ] Full HDI with versioned model configurations
+- [x] European competition results loaded and scored (E)
+- [x] Domestic-parity metric (C)
+- [x] Full HDI, with a model version on every score
 - [ ] User-adjustable weightings in the UI
 
 ### Stage 3: Data engineering platform
@@ -154,26 +161,21 @@ The warehouse stores the historical analytical datasets. PostgreSQL serves preco
 
 ## Getting started
 
-### Ingest the raw data
-
-Requires Python 3.11+.
+Requires Python 3.11+ and a Postgres database (the project uses a Supabase project).
 
 ```bash
-pip install -r requirements.txt
-python -m ingestion.run          # writes data/raw/premier_league_raw.json
-pytest
+pip install pandas sqlalchemy "psycopg[binary]" python-dotenv
+
+# .env in the repo root (never committed):
+#   DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/postgres
+
+python data_pipeline/run_pipeline.py      # create tables, load the CSVs, build round_rank
+python data_pipeline/season_index.py      # European-strength score (E)
+python data_pipeline/dominance_score.py   # D, C, L and the HDI
 ```
 
-The pipeline extracts three datasets into one JSON file (the Bronze layer), validates match counts per season, and records source metadata:
+`run_pipeline.py` empties and reloads its tables in a single transaction, so it is safe to rerun. The two scoring scripts replace their own tables, so to try different weights, edit `reference_data.py` and rerun them (rerun `run_pipeline.py` first if you changed a round rank or strength factor).
 
-| Dataset | Source | Coverage |
-|---|---|---|
-| `football_data_matches` | [football-data.co.uk](https://www.football-data.co.uk/englandm.php) | 1993/94 onward: results, shots, corners, fouls, cards, odds (where available) |
-| `engsoccerdata_england_matches` | [engsoccerdata](https://github.com/jalapic/engsoccerdata) | Top flight from 1992/93, used to fill the 1992/93 gap and cross-check results |
-| `champions_league_matches` | [engsoccerdata](https://github.com/jalapic/engsoccerdata) | European Cup / Champions League, 1992/93 to 2017/18 |
+**Inputs** are two CSV files in `raw_data/`: the Premier League tables for 1992-93 to 2025-26, and European match results. The results file has no penalty data, so the winners of the six English finals that finished level are written into `reference_data.py`.
 
-| `european_campaigns` | [Wikipedia](https://en.wikipedia.org/wiki/UEFA_Champions_League) season pages | English clubs in the Champions League, UEFA Cup / Europa League, Cup Winners' Cup and Conference League, 1992/93 onward: the furthest round each club reached |
-
-Known gaps: `european_campaigns` records the round reached, not match-level results (the Champions League has match-level data to 2017/18 in `champions_league_matches`). Intertoto Cup and Super Cup entries are excluded. The first run makes several hundred polite requests to Wikipedia and takes ~30 minutes; pages are cached in `data/cache/`, so reruns take seconds. Player statistics will be added in a later stage.
-
-Data credit: football-data.co.uk, engsoccerdata by James Curley (free for non-commercial use), and Wikipedia (CC BY-SA 4.0).
+The pipeline turns on row-level security for every table, so Supabase's public API keys cannot read or write them; the scripts connect directly with the database URL.

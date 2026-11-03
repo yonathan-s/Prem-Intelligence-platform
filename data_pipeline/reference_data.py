@@ -61,6 +61,26 @@ ROUND_RANK_EXCEPTIONS = {
 RUNNER_UP_RANK = 9
 WINNER_RANK = 10
 
+# ---- Historical Dominance Index -------------------------------------------------------------
+# D, the domestic score, is a weighted average of these four measures. Each one is first turned
+# into a 0-100 scale by comparing every club-season in the data, best = 100, worst = 0. The
+# weights add up to 1.
+D_WEIGHTS = {
+    "points_per_game": 0.30,
+    "win_rate": 0.20,
+    "goal_diff_per_game": 0.25,
+    "title_margin": 0.25,  # points per game ahead of the strongest rival (negative if behind)
+}
+
+# L, the league-strength score, mixes European strength (E) with domestic parity (C).
+L_EUROPE_WEIGHT = 0.75
+L_PARITY_WEIGHT = 0.25
+
+# HDI = D * (HDI_BASE + HDI_LEAGUE_SHARE * L / 100). A club with the weakest possible league
+# (L = 0) keeps 80% of its domestic score; the strongest possible league (L = 100) gives 100%.
+HDI_BASE = 0.80
+HDI_LEAGUE_SHARE = 0.20
+
 # The UEFA file's spelling -> the team file's spelling, only where they differ.
 UEFA_NAME_TO_CLUB = {
     "Tottenham Hotspur": "Tottenham",

@@ -78,6 +78,27 @@ CREATE TABLE IF NOT EXISTS season_index (
     FOREIGN KEY (season_start, club_id) REFERENCES team_season (season_start, club_id)
 );
 
+-- The Historical Dominance Index for each Premier League club and season, with every part
+-- that went into it (see dominance_score.py). All scores run from 0 to 100.
+CREATE TABLE IF NOT EXISTS dominance_score (
+    season_start          integer NOT NULL,
+    club_id               integer NOT NULL,
+    -- The raw measures behind the domestic score (D).
+    points_per_game       numeric(6, 4) NOT NULL,
+    win_rate              numeric(6, 4) NOT NULL,
+    goal_diff_per_game    numeric(6, 4) NOT NULL,
+    title_margin          numeric(6, 4) NOT NULL, -- points per game ahead of (or behind) the strongest rival
+    rest_of_league_ppg_sd numeric(6, 4) NOT NULL, -- spread of the other clubs' points per game
+    d_score               numeric(6, 2) NOT NULL, -- domestic dominance
+    e_score               numeric(6, 2),          -- European strength (season_index.weighted_score)
+    c_score               numeric(6, 2) NOT NULL, -- domestic parity: how evenly matched the rest of the league was
+    l_score               numeric(6, 2),          -- league strength: 75% e_score + 25% c_score
+    hdi                   numeric(6, 2),          -- d_score scaled up or down by l_score
+    model_version         text NOT NULL,
+    PRIMARY KEY (season_start, club_id),
+    FOREIGN KEY (season_start, club_id) REFERENCES team_season (season_start, club_id)
+);
+
 -- Supabase exposes every table in the public schema through its API keys. With row level
 -- security on and no policies, those keys can't read or write these tables. This pipeline
 -- connects as the database owner, which is not affected.
@@ -88,3 +109,4 @@ ALTER TABLE team_season ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uefa_match  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE round_rank   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE season_index ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dominance_score ENABLE ROW LEVEL SECURITY;
