@@ -4,4 +4,6 @@
 - Build one file at a time. After each, summarize what it does in plain English.
 - Keep explanations concrete: reference actual function/variable names, not generic descriptions.
 - Don't scaffold multiple files in a single response unless I explicitly ask for a full build.
+- Don't stage or commit anything yourself
+
 
