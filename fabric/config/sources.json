@@ -1,0 +1,24 @@
+{
+  "sources": [
+    {
+      "name": "team_season_records",
+      "source_path": "Files/team_season_records.csv",
+      "format": "csv",
+      "header": true,
+      "infer_schema": false,
+      "target_table": "bronze_team_season_records",
+      "keys": ["season", "team"],
+      "notes": "One row per Premier League club-season, 1992-93 to 2025-26."
+    },
+    {
+      "name": "uefa_match_results",
+      "source_path": "Files/uefacompetitionresults.csv",
+      "format": "csv",
+      "header": true,
+      "infer_schema": false,
+      "target_table": "bronze_uefa_match_results",
+      "keys": ["Date", "Cup", "Round", "Home", "Away"],
+      "notes": "Every European match from 1955. No match ID exists, so these keys are a best guess at uniqueness; Silver's duplicate check will confirm."
+    }
+  ]
+}
