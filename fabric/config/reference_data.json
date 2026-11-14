@@ -1,0 +1,41 @@
+{
+  "first_season_start": 1992,
+  "competitions": [
+    {"code": "CL", "name": "Champions League", "strength_factor": 1.0},
+    {"code": "EL", "name": "Europa League", "strength_factor": 0.6},
+    {"code": "UC", "name": "UEFA Cup", "strength_factor": 0.6},
+    {"code": "CWC", "name": "Cup Winners' Cup", "strength_factor": 0.5},
+    {"code": "ECL", "name": "Conference League", "strength_factor": 0.4}
+  ],
+  "uefa_name_to_club": {
+    "Tottenham Hotspur": "Tottenham",
+    "Newcastle United": "Newcastle",
+    "Leeds United": "Leeds",
+    "West Ham United": "West Ham",
+    "Leicester City": "Leicester",
+    "Blackburn Rovers": "Blackburn",
+    "Bolton Wanderers": "Bolton",
+    "Wolverhampton Wanderers": "Wolves",
+    "Ipswich Town": "Ipswich",
+    "Stoke City": "Stoke",
+    "Swansea City": "Swansea",
+    "Birmingham City": "Birmingham",
+    "Brighton & Hove Albion": "Brighton",
+    "Norwich City": "Norwich",
+    "Wigan Athletic": "Wigan",
+    "Cardiff City": "Cardiff"
+  },
+  "english_clubs_not_in_premier_league": ["Millwall", "Wrexham"],
+  "round_spelling_fixes": {
+    "1/2 final": "1/2 Final",
+    "Play-Offs": "Play-offs"
+  },
+  "shootout_winners": [
+    {"season_start": 1999, "competition": "UC", "winner": "Galatasaray"},
+    {"season_start": 2004, "competition": "CL", "winner": "Liverpool"},
+    {"season_start": 2007, "competition": "CL", "winner": "Manchester United"},
+    {"season_start": 2011, "competition": "CL", "winner": "Chelsea"},
+    {"season_start": 2020, "competition": "EL", "winner": "Villarreal"},
+    {"season_start": 2025, "competition": "CL", "winner": "Paris Saint-Germain"}
+  ]
+}
