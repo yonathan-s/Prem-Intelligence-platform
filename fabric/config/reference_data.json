@@ -37,5 +37,43 @@
     {"season_start": 2011, "competition": "CL", "winner": "Chelsea"},
     {"season_start": 2020, "competition": "EL", "winner": "Villarreal"},
     {"season_start": 2025, "competition": "CL", "winner": "Paris Saint-Germain"}
-  ]
+  ],
+  "round_ranks": {
+    "Qualifying Round": 0,
+    "First qualifying round": 0,
+    "Second qualifying round": 0,
+    "Third qualifying round": 0,
+    "Play-offs": 0,
+    "Group stage": 1,
+    "Group stage 1": 1,
+    "League phase": 1,
+    "Group stage 2": 2,
+    "Knockout round play-offs": 2,
+    "1/32 Final": 2,
+    "1/16 Final": 3,
+    "1/8 Final": 4,
+    "1/4 Final": 6,
+    "1/2 Final": 8
+  },
+  "round_rank_exceptions": [
+    {"competition": "UC", "round": "First Round", "rank": 1},
+    {"competition": "CL", "round": "First Round", "rank": 0},
+    {"competition": "EL", "round": "First Round", "rank": 0},
+    {"competition": "CL", "round": "Second Round", "rank": 1},
+    {"competition": "UC", "round": "Second Round", "rank": 2},
+    {"competition": "UC", "round": "Group stage", "rank": 2}
+  ],
+  "runner_up_rank": 9,
+  "winner_rank": 10,
+  "d_weights": {
+    "points_per_game": 0.30,
+    "win_rate": 0.20,
+    "goal_diff_per_game": 0.25,
+    "title_margin": 0.25
+  },
+  "l_europe_weight": 0.75,
+  "l_parity_weight": 0.25,
+  "hdi_base": 0.80,
+  "hdi_league_share": 0.20,
+  "model_version": "v1"
 }
