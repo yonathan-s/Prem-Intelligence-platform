@@ -5,9 +5,13 @@ import pandas as pd
 from reference_data import (
     COMPETITIONS,
     ENGLISH_CLUBS_NOT_IN_PREMIER_LEAGUE,
+    ROUND_RANK_EXCEPTIONS,
+    ROUND_RANKS,
     ROUND_SPELLING_FIXES,
+    RUNNER_UP_RANK,
     SHOOTOUT_WINNERS,
     UEFA_NAME_TO_CLUB,
+    WINNER_RANK,
 )
 
 FIRST_YEAR = 1992
@@ -103,3 +107,29 @@ def clean_uefa_matches(uefa_raw: pd.DataFrame, clubs: pd.DataFrame) -> pd.DataFr
         final = (out["season_start"] == year) & (out["competition"] == competition) & (out["round"] == "Final")
         out.loc[final, "shootout_winner"] = winner
     return out.reset_index(drop=True)
+
+
+def build_round_rank(uefa_match: pd.DataFrame) -> pd.DataFrame:
+    """round_rank: a rank and a weight for every (competition, round) that appears in the data.
+
+    weight = rank * the competition's strength_factor. The Final is not ranked here, because it
+    depends on who won; instead every competition gets a "Winner" and a "Runner-up" row.
+    """
+    factor = {c["code"]: c["strength_factor"] for c in COMPETITIONS}
+
+    rows = []
+    played = uefa_match.loc[uefa_match["round"] != "Final", ["competition", "round"]].drop_duplicates()
+    for competition, rnd in played.itertuples(index=False):
+        # A competition-specific rank wins over the general one for that round label.
+        rank = ROUND_RANK_EXCEPTIONS.get((competition, rnd), ROUND_RANKS.get(rnd))
+        if rank is None:
+            raise ValueError(f"No rank for round {rnd!r} in {competition}: add it to reference_data.py")
+        rows.append((competition, rnd, rank))
+
+    for competition in factor:
+        rows.append((competition, "Runner-up", RUNNER_UP_RANK))
+        rows.append((competition, "Winner", WINNER_RANK))
+
+    out = pd.DataFrame(rows, columns=["competition", "round", "rank"])
+    out["weight"] = (out["rank"] * out["competition"].map(factor)).round(2)
+    return out.sort_values(["competition", "rank", "round"]).reset_index(drop=True)
